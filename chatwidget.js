@@ -12,7 +12,7 @@
     colorDark: '#0a7d58',
     width: 380,
     position: 'bottom-right',
-    groqApiKey: 'YOUR_API_KEY',
+    groqApiKey: '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',
     model: 'llama-3.1-8b-instant',
     systemPrompt: 'You are a helpful real estate assistant.',
     rateLimitMs: 1500,
