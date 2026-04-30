@@ -5,7 +5,10 @@
     placeholder: 'Type a message...',
     color: '#1a73e8',
     width: 360,
-    position: 'bottom-right'
+    position: 'bottom-right',
+    groqApiKey: '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',
+    model: 'llama-3.1-8b-instant',
+    systemPrompt: 'You are a helpful real estate assistant. Be concise and friendly.'
   };
 
   function init() {
@@ -141,14 +144,38 @@
       addMsg('user', text);
       history.push({ role: 'user', content: text });
       var typingRow = addMsg('bot', '...');
-      setTimeout(function () {
-        var reply = 'Thanks for your message! This is a test response - the AI will be connected soon.';
+
+      var messages = [{ role: 'system', content: cfg.systemPrompt }];
+      for (var i = 0; i < history.length; i++) { messages.push(history[i]); }
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://api.groq.com/openai/v1/chat/completions', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + cfg.groqApiKey);
+      xhr.onreadystatechange = function () {
+        if (xhr.readyState !== 4) { return; }
         if (typingRow.parentNode) { typingRow.parentNode.removeChild(typingRow); }
+        var reply;
+        try {
+          var data = JSON.parse(xhr.responseText);
+          reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content)
+            || (data.error && data.error.message)
+            || 'No response.';
+        } catch (e) {
+          reply = 'Error: could not parse response.';
+        }
         addMsg('bot', reply);
         history.push({ role: 'assistant', content: reply });
         sendBtn.disabled = false;
         scrollBottom();
-      }, 800);
+      };
+      xhr.onerror = function () {
+        if (typingRow.parentNode) { typingRow.parentNode.removeChild(typingRow); }
+        addMsg('bot', 'Error: request failed.');
+        sendBtn.disabled = false;
+        scrollBottom();
+      };
+      xhr.send(JSON.stringify({ model: cfg.model, messages: messages }));
     }
 
     btn.addEventListener('click', function () { setOpen(panel.style.display !== 'flex'); });
