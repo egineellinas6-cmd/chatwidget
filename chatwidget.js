@@ -12,54 +12,57 @@
     colorDark: '#0a7d58',
     width: 380,
     position: 'bottom-right',
-    groqApiKey: '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',
+    groqApiKey: 'YOUR_API_KEY_HERE',
     model: 'llama-3.1-8b-instant',
     systemPrompt: 'You are a helpful real estate assistant.',
-    rateLimitMs: 1500,
     historyMaxPairs: 10,
 
     suggestions: [
       'Βρες μου διαμέρισμα στη Θεσσαλονίκη',
       'Τιμές για ενοικίαση;',
-      '2 υπνοδωμάτια κέντρο',
+      '2 υπνοδωμάτια κέντρο'
     ]
   };
 
   function init() {
-    if (!document.body) return document.addEventListener('DOMContentLoaded', init);
+    if (!document.body) {
+      document.addEventListener('DOMContentLoaded', init);
+      return;
+    }
 
     const host = document.createElement('div');
     document.body.appendChild(host);
+
     const shadow = host.attachShadow({ mode: 'open' });
 
-    const c = cfg.color, cDark = cfg.colorDark;
+    const c = cfg.color;
+    const cDark = cfg.colorDark;
 
-    /* ---------- STYLE ---------- */
+    /* ---------------- STYLE ---------------- */
     const style = document.createElement('style');
     style.textContent = `
-      *{box-sizing:border-box}
+      *{box-sizing:border-box;font-family:system-ui;}
 
       #cw-btn{
         position:fixed;bottom:24px;right:24px;
         width:56px;height:56px;border-radius:50%;
         background:linear-gradient(135deg,${c},${cDark});
-        color:#fff;border:none;cursor:pointer;
+        border:none;color:#fff;cursor:pointer;
         display:flex;align-items:center;justify-content:center;
-        box-shadow:0 6px 24px rgba(0,0,0,.25);
         z-index:999999;
+        box-shadow:0 10px 30px rgba(0,0,0,.25);
       }
 
       #cw-panel{
         position:fixed;bottom:90px;right:24px;
         width:${cfg.width}px;height:560px;
-        background:#fff;border-radius:18px;
-        box-shadow:0 24px 60px rgba(0,0,0,.2);
+        background:#fff;border-radius:16px;
         display:flex;flex-direction:column;
         overflow:hidden;
         opacity:0;transform:translateY(20px) scale(.95);
         transition:.25s;
         pointer-events:none;
-        font-family:system-ui;
+        box-shadow:0 20px 60px rgba(0,0,0,.2);
       }
 
       #cw-panel.open{
@@ -69,24 +72,23 @@
       #cw-header{
         padding:14px;
         background:linear-gradient(135deg,${c},${cDark});
-        color:#fff;
-        font-weight:600;
+        color:#fff;font-weight:600;
       }
 
       #cw-msgs{
         flex:1;
         overflow:auto;
         padding:14px;
-        background:linear-gradient(#f9fafb,#f3f4f6);
+        background:#f6f7f9;
       }
 
       .cw-bub{
         padding:10px 14px;
-        border-radius:16px;
+        border-radius:14px;
         margin:6px 0;
         max-width:80%;
         font-size:14px;
-        line-height:1.5;
+        line-height:1.4;
       }
 
       .b{background:#fff;border:1px solid #eee;}
@@ -97,6 +99,7 @@
         gap:8px;
         padding:10px;
         border-top:1px solid #eee;
+        background:#fff;
       }
 
       textarea{
@@ -106,9 +109,7 @@
         outline:none;
         padding:10px;
         border-radius:12px;
-        background:#f3f4f6;
-        font-size:14px;
-        max-height:100px;
+        background:#f1f3f5;
       }
 
       #cw-send{
@@ -119,26 +120,23 @@
       }
 
       .chips{
-        display:flex;
-        flex-wrap:wrap;
-        gap:6px;
-        margin:8px 0;
+        display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;
       }
 
       .chip{
         padding:6px 10px;
-        background:#fff;
         border:1px solid #ddd;
         border-radius:20px;
         font-size:12px;
         cursor:pointer;
+        background:#fff;
       }
 
-      .typing{opacity:.6;font-size:13px}
+      .typing{opacity:.6;font-size:13px;}
     `;
     shadow.appendChild(style);
 
-    /* ---------- UI ---------- */
+    /* ---------------- UI ---------------- */
     const btn = document.createElement('button');
     btn.id = 'cw-btn';
     btn.textContent = '💬';
@@ -163,11 +161,18 @@
     send.id = 'cw-send';
     send.textContent = '➤';
 
-    inputRow.append(input, send);
-    panel.append(header, msgs, inputRow);
-    shadow.append(btn, panel);
+    inputRow.appendChild(input);
+    inputRow.appendChild(send);
 
-    /* ---------- LOGIC ---------- */
+    panel.appendChild(header);
+    panel.appendChild(msgs);
+    panel.appendChild(inputRow);
+
+    /* IMPORTANT FIX (was crashing UI) */
+    shadow.appendChild(btn);
+    shadow.appendChild(panel);
+
+    /* ---------------- STATE ---------------- */
     let open = false;
     let history = [];
 
@@ -244,13 +249,21 @@
         },
         body: JSON.stringify({
           model: cfg.model,
-          messages: [{ role: 'system', content: cfg.systemPrompt }, ...history]
+          messages: [
+            { role: 'system', content: cfg.systemPrompt },
+            ...history
+          ]
         })
       })
       .then(r => r.json())
       .then(d => {
         typing.remove();
-        const reply = d.choices?.[0]?.message?.content || 'Error';
+
+        let reply = 'Error';
+        if (d && d.choices && d.choices[0]) {
+          reply = d.choices[0].message.content;
+        }
+
         addMsg('bot', reply);
         history.push({ role: 'assistant', content: reply });
       })
@@ -267,12 +280,9 @@
         e.preventDefault();
         sendMsg();
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        sendMsg();
-      }
     });
 
-    /* ---------- INIT ---------- */
+    /* INIT */
     addMsg('bot', cfg.welcomeMessage);
     addSuggestions();
   }
