@@ -1,8 +1,8 @@
 <script>
 /* ============================================
-   VERSION: v3.1 - Fixed Chat Bubble Visibility
+   VERSION: v3.4 - Better Greek (Qwen2.5)
    Date: May 2026
-   Fix: Better error handling for GitHub fetch
+   Model: qwen2.5-72b-instruct (best Greek)
    ============================================ */
 
 (function () {
@@ -17,7 +17,7 @@
     colorDark: '#0a7d58',
     width: 380,
     groqApiKey: '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',
-    model: 'llama-3.3-70b-versatile',
+    model: 'qwen2.5-72b-instruct',        // ← BETTER GREEK MODEL
     suggestions: [
       'Βρες μου διαμέρισμα στη Θεσσαλονίκη',
       'Τιμές για ενοικίαση;',
@@ -31,25 +31,24 @@
     try {
       const timestamp = Date.now();
       const res = await fetch(`https://raw.githubusercontent.com/egineellinas6-cmd/chatwidget/refs/heads/main/properties.json?v=${timestamp}`);
-      
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      
       PROPERTIES = await res.json();
-      console.log("✅ Properties loaded from GitHub:", PROPERTIES.length);
+      console.log("✅ Properties loaded:", PROPERTIES.length);
     } catch (err) {
-      console.warn("⚠️ Could not load properties.json, using empty array:", err.message);
+      console.warn("⚠️ Using empty properties:", err.message);
       PROPERTIES = [];
     }
   }
 
-  function init() {
-    if (!document.body) {
-      document.addEventListener('DOMContentLoaded', init);
+  function createWidget() {
+    const container = document.getElementById('widget-container');
+    if (!container) {
+      console.error("Widget container not found!");
       return;
     }
 
     const host = document.createElement('div');
-    document.body.appendChild(host);
+    container.appendChild(host);
     const shadow = host.attachShadow({ mode: 'open' });
 
     const c = cfg.color;
@@ -72,10 +71,11 @@
       textarea { flex: 1; resize: none; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 16px; font-size: 14.5px; }
       #cw-send { width: 44px; height: 44px; border: none; border-radius: 50%; background: ${c}; color: white; cursor: pointer; }
       #cw-footer { padding: 8px 14px; text-align: center; font-size: 10.5px; color: #94a3b8; }
+      .cw-bub a { color: #0ea574; text-decoration: underline; font-weight: 500; }
+      .cw-bub a:hover { color: #0a7d58; }
     `;
     shadow.appendChild(style);
 
-    /* UI Elements - CREATED FIRST */
     const btn = document.createElement('button');
     btn.id = 'cw-btn';
     btn.innerHTML = '💬';
@@ -112,7 +112,7 @@
 
     const footer = document.createElement('div');
     footer.id = 'cw-footer';
-    footer.innerHTML = `Powered by Groq • v3.1`;
+    footer.innerHTML = `Powered by Groq • v3.4`;
 
     panel.appendChild(header);
     panel.appendChild(msgs);
@@ -180,7 +180,7 @@
       const typing = addTyping();
 
       const contextText = PROPERTIES.length > 0 
-        ? PROPERTIES.map(p => `• ${p.title} - ${p.location} | ${p.price} | ${p.size}\n  ${p.description}\n  Link: ${p.link}`).join('\n\n')
+        ? PROPERTIES.map(p => `• ${p.title} - ${p.location} | ${p.price} | ${p.size}\n  ${p.description}\n  <a href="${p.link}" target="_blank">Δείτε το ακίνητο</a>`).join('\n\n')
         : "No properties loaded.";
 
       const systemPrompt = `You are a helpful real estate assistant for Panda Θεσσαλον "οίκοι".
@@ -188,12 +188,14 @@
 Use ONLY these properties to answer:
 ${contextText}
 
-Rules:
-- Answer in Greek
-- Keep answers short (max 6-8 lines)
-- Use bullet points
-- When mentioning a property, include the link like this: [Δείτε το ακίνητο](LINK)
-- End with phone number: 6974023646`;
+CRITICAL RULES:
+1. Answer in Greek only - use natural, fluent Greek
+2. Keep answers SHORT (max 6-8 lines)
+3. Use bullet points
+4. When mentioning a property, ALWAYS include the HTML link exactly as shown above
+5. NEVER output markdown like [text](url) - only use the HTML <a> tags
+6. End every response with: Τηλέφωνο: 6974023646
+7. Be friendly and professional`;
 
       try {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -250,17 +252,15 @@ Rules:
       }
     });
 
-    /* Load properties in background, but show widget immediately */
-    loadProperties().then(() => {
-      console.log("Widget ready with", PROPERTIES.length, "properties");
-    }).catch(() => {
-      console.log("Widget ready (no properties loaded)");
-    });
-
-    /* Show welcome message immediately */
     addMsg('bot', cfg.welcomeMessage);
   }
 
-  init();
+  async function start() {
+    await loadProperties();
+    createWidget();
+    console.log("✅ Widget initialized (v3.4 - Qwen2.5)");
+  }
+
+  start();
 })();
 </script>
