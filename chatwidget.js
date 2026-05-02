@@ -1,9 +1,8 @@
 <script>
 /* ============================================
-   VERSION: v3.0 - Remote JSON from GitHub
+   VERSION: v3.1 - Fixed Chat Bubble Visibility
    Date: May 2026
-   Loads properties from: 
-   https://raw.githubusercontent.com/egineellinas6-cmd/chatwidget/refs/heads/main/properties.json
+   Fix: Better error handling for GitHub fetch
    ============================================ */
 
 (function () {
@@ -28,14 +27,17 @@
 
   let PROPERTIES = [];
 
-  // Load properties from GitHub
   async function loadProperties() {
     try {
-      const res = await fetch("https://raw.githubusercontent.com/egineellinas6-cmd/chatwidget/refs/heads/main/properties.json");
+      const timestamp = Date.now();
+      const res = await fetch(`https://raw.githubusercontent.com/egineellinas6-cmd/chatwidget/refs/heads/main/properties.json?v=${timestamp}`);
+      
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      
       PROPERTIES = await res.json();
       console.log("✅ Properties loaded from GitHub:", PROPERTIES.length);
     } catch (err) {
-      console.error("Failed to load properties.json from GitHub");
+      console.warn("⚠️ Could not load properties.json, using empty array:", err.message);
       PROPERTIES = [];
     }
   }
@@ -73,6 +75,7 @@
     `;
     shadow.appendChild(style);
 
+    /* UI Elements - CREATED FIRST */
     const btn = document.createElement('button');
     btn.id = 'cw-btn';
     btn.innerHTML = '💬';
@@ -109,7 +112,7 @@
 
     const footer = document.createElement('div');
     footer.id = 'cw-footer';
-    footer.innerHTML = `Powered by Groq • v3.0`;
+    footer.innerHTML = `Powered by Groq • v3.1`;
 
     panel.appendChild(header);
     panel.appendChild(msgs);
@@ -176,7 +179,6 @@
 
       const typing = addTyping();
 
-      // Build context from loaded properties
       const contextText = PROPERTIES.length > 0 
         ? PROPERTIES.map(p => `• ${p.title} - ${p.location} | ${p.price} | ${p.size}\n  ${p.description}\n  Link: ${p.link}`).join('\n\n')
         : "No properties loaded.";
@@ -248,10 +250,15 @@ Rules:
       }
     });
 
-    // Load properties from GitHub and show welcome
+    /* Load properties in background, but show widget immediately */
     loadProperties().then(() => {
-      addMsg('bot', cfg.welcomeMessage);
+      console.log("Widget ready with", PROPERTIES.length, "properties");
+    }).catch(() => {
+      console.log("Widget ready (no properties loaded)");
     });
+
+    /* Show welcome message immediately */
+    addMsg('bot', cfg.welcomeMessage);
   }
 
   init();
