@@ -1,36 +1,56 @@
 <script>
+/* ============================================
+   VERSION: v2.0 - Hardcoded Context
+   Date: May 2026
+   Description: Uses hardcoded WEBSITE_CONTEXT
+   Model: llama-3.1-8b-instant
+   ============================================ */
+
 (function () {
   if (window.__cwLoaded) return;
   window.__cwLoaded = true;
 
+  const WEBSITE_CONTEXT = `
+Panda Θεσσαλον "οίκοι" - Χαρπαντίδης Κοσμάς
+Τηλ: 6974023646 | 2310276333
+
+ΕΝΕΡΓΑ ΑΚΙΝΗΤΑ:
+• Διαμέρισμα 107τμ (3 υ/δ) - Μαρτίου, ρετιρέ με 50τμ βεράντα, θέα θάλασσα
+• Διαμέρισμα 90τμ + 30τμ αυλή (2 υ/δ) - Άγιος Δημήτριος, 187.000€
+• 6 Διαμερίσματα Νέα Πολιτεία (Εύοσμος) 2026: 45τμ από 135.000€, 75τμ από 135-195.000€
+• Διαμέρισμα 140τμ (3 υ/δ) - Τριανδρία, 360.000€, θέα θάλασσα + δάσος
+
+Πολλά ακίνητα έχουν πωληθεί (ΕΠΩΛΗΘΗ).
+`;
+
   const cfg = {
     botName: 'AI Assistant',
     welcomeMessage: 'Γεια σας! Πώς μπορώ να σας βοηθήσω;',
-    placeholder: 'Γράψτε ένα μήνυμα...',
+    placeholder: 'Γράψετε ένα μήνυμα...',
     color: '#0ea574',
     colorDark: '#0a7d58',
     width: 380,
     groqApiKey: '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',
-    model: 'llama-3.3-70b-versatile',        // ← Changed to versatile
+    model: 'llama-3.1-8b-instant',
+    systemPrompt: `You are a helpful real estate assistant for Panda Θεσσαλον "οίκοι".
+
+RULES:
+- Answer in Greek
+- Keep answers SHORT and clear (max 6-8 lines)
+- Use bullet points
+- Only mention 2-3 most relevant properties
+- Always end with the phone number: 6974023646
+- Never repeat the same information
+- Be friendly but professional
+
+PROPERTY INFO:
+${WEBSITE_CONTEXT}`,
     suggestions: [
       'Βρες μου διαμέρισμα στη Θεσσαλονίκη',
       'Τιμές για ενοικίαση;',
       '2 υπνοδωμάτια κέντρο'
     ]
   };
-
-  let PROPERTIES = [];
-
-  async function loadProperties() {
-    try {
-      const res = await fetch("properties.json");
-      PROPERTIES = await res.json();
-      console.log("✅ Properties loaded:", PROPERTIES.length);
-    } catch (err) {
-      console.error("Failed to load properties.json");
-      PROPERTIES = [];
-    }
-  }
 
   function init() {
     if (!document.body) {
@@ -48,40 +68,16 @@
     const style = document.createElement('style');
     style.textContent = `
       * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-      #cw-btn {
-        position: fixed; bottom: 24px; right: 24px;
-        width: 60px; height: 60px; border-radius: 50%;
-        background: linear-gradient(135deg, ${c}, ${cDark});
-        border: none; color: white; cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 28px; z-index: 9999999;
-        box-shadow: 0 8px 25px rgba(14, 165, 116, 0.35);
-      }
-      #cw-panel {
-        position: fixed; bottom: 92px; right: 24px;
-        width: ${cfg.width}px; height: 580px;
-        background: #ffffff; border-radius: 20px;
-        display: flex; flex-direction: column;
-        overflow: hidden;
-        box-shadow: 0 25px 70px rgba(0, 0, 0, 0.18);
-        opacity: 0; transform: translateY(30px) scale(0.96);
-        transition: all 0.28s cubic-bezier(0.32, 0.72, 0, 1);
-        pointer-events: none;
-        z-index: 9999998;
-        border: 1px solid #f0f0f0;
-      }
+      #cw-btn { position: fixed; bottom: 24px; right: 24px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, ${c}, ${cDark}); border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 28px; z-index: 9999999; box-shadow: 0 8px 25px rgba(14, 165, 116, 0.35); }
+      #cw-panel { position: fixed; bottom: 92px; right: 24px; width: ${cfg.width}px; height: 580px; background: #ffffff; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 70px rgba(0, 0, 0, 0.18); opacity: 0; transform: translateY(30px) scale(0.96); transition: all 0.28s cubic-bezier(0.32, 0.72, 0, 1); pointer-events: none; z-index: 9999998; border: 1px solid #f0f0f0; }
       #cw-panel.open { opacity: 1; transform: none; pointer-events: auto; }
-      #cw-header {
-        background: linear-gradient(135deg, ${c}, ${cDark});
-        color: white; padding: 14px 16px;
-        display: flex; align-items: center; gap: 12px;
-        font-weight: 600; font-size: 15px;
-      }
+      @media (max-width: 900px) { #cw-panel { width: 100% !important; left: 0 !important; right: 0 !important; bottom: 0 !important; height: 85vh !important; border-radius: 20px 20px 0 0 !important; } }
+      #cw-header { background: linear-gradient(135deg, ${c}, ${cDark}); color: white; padding: 14px 16px; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 15px; }
       .avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; font-size: 18px; }
       #cw-msgs { flex: 1; overflow-y: auto; padding: 16px; background: #f8fafc; }
       .cw-bub { padding: 12px 16px; border-radius: 18px; margin: 8px 0; max-width: 82%; font-size: 14.5px; line-height: 1.5; }
       .b { background: #fff; border: 1px solid #e2e8f0; }
-      .u { background: ${c}; color: white; margin-left: auto; border-radius: 18px 18px 4px 18px; }
+      .u { background: ${c}; color: white; margin-left: auto; }
       #cw-inputRow { display: flex; gap: 10px; padding: 12px 14px; background: #fff; border-top: 1px solid #f1f5f9; }
       textarea { flex: 1; resize: none; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px 16px; font-size: 14.5px; }
       #cw-send { width: 44px; height: 44px; border: none; border-radius: 50%; background: ${c}; color: white; cursor: pointer; }
@@ -126,7 +122,7 @@
 
     const footer = document.createElement('div');
     footer.id = 'cw-footer';
-    footer.textContent = 'Powered by Groq • Ultra-fast AI';
+    footer.innerHTML = `Powered by Groq • v2.0`;  /* ← VERSION SHOWN HERE */
 
     panel.appendChild(header);
     panel.appendChild(msgs);
@@ -162,7 +158,7 @@
     function addMsg(role, text) {
       const d = document.createElement('div');
       d.className = `cw-bub ${role === 'user' ? 'u' : 'b'}`;
-      d.innerHTML = text;
+      d.textContent = text;
       msgs.appendChild(d);
       msgs.scrollTop = msgs.scrollHeight;
       return d;
@@ -193,23 +189,6 @@
 
       const typing = addTyping();
 
-      // ==================== PROMPT SENT TO GROQ ====================
-      const contextText = PROPERTIES.length > 0 
-        ? PROPERTIES.map(p => `• ${p.title} - ${p.location} | ${p.price} | ${p.size}\n  ${p.description}\n  Link: ${p.link}`).join('\n\n')
-        : "No properties loaded.";
-
-      const systemPrompt = `You are a helpful real estate assistant for Panda Θεσσαλον "οίκοι".
-
-Use ONLY these properties to answer:
-${contextText}
-
-Rules:
-- Answer in Greek
-- Keep answers short (max 6-8 lines)
-- Use bullet points
-- When mentioning a property, include the link like this: [Δείτε το ακίνητο](LINK)
-- End with phone number: 6974023646`;
-
       try {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
@@ -220,7 +199,7 @@ Rules:
           body: JSON.stringify({
             model: cfg.model,
             messages: [
-              { role: 'system', content: systemPrompt },
+              { role: 'system', content: cfg.systemPrompt },
               ...history
             ]
           })
@@ -265,9 +244,7 @@ Rules:
       }
     });
 
-    loadProperties().then(() => {
-      addMsg('bot', cfg.welcomeMessage);
-    });
+    addMsg('bot', cfg.welcomeMessage);
   }
 
   init();
