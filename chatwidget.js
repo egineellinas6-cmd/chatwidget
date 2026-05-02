@@ -1,56 +1,44 @@
 <script>
 /* ============================================
-   VERSION: v2.0 - Hardcoded Context
+   VERSION: v3.0 - Remote JSON from GitHub
    Date: May 2026
-   Description: Uses hardcoded WEBSITE_CONTEXT
-   Model: llama-3.1-8b-instant
+   Loads properties from: 
+   https://raw.githubusercontent.com/egineellinas6-cmd/chatwidget/refs/heads/main/properties.json
    ============================================ */
 
 (function () {
   if (window.__cwLoaded) return;
   window.__cwLoaded = true;
 
-  const WEBSITE_CONTEXT = `
-Panda Θεσσαλον "οίκοι" - Χαρπαντίδης Κοσμάς
-Τηλ: 6974023646 | 2310276333
-
-ΕΝΕΡΓΑ ΑΚΙΝΗΤΑ:
-• Διαμέρισμα 107τμ (3 υ/δ) - Μαρτίου, ρετιρέ με 50τμ βεράντα, θέα θάλασσα
-• Διαμέρισμα 90τμ + 30τμ αυλή (2 υ/δ) - Άγιος Δημήτριος, 187.000€
-• 6 Διαμερίσματα Νέα Πολιτεία (Εύοσμος) 2026: 45τμ από 135.000€, 75τμ από 135-195.000€
-• Διαμέρισμα 140τμ (3 υ/δ) - Τριανδρία, 360.000€, θέα θάλασσα + δάσος
-
-Πολλά ακίνητα έχουν πωληθεί (ΕΠΩΛΗΘΗ).
-`;
-
   const cfg = {
     botName: 'AI Assistant',
     welcomeMessage: 'Γεια σας! Πώς μπορώ να σας βοηθήσω;',
-    placeholder: 'Γράψετε ένα μήνυμα...',
+    placeholder: 'Γράψτε ένα μήνυμα...',
     color: '#0ea574',
     colorDark: '#0a7d58',
     width: 380,
     groqApiKey: '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',
-    model: 'llama-3.1-8b-instant',
-    systemPrompt: `You are a helpful real estate assistant for Panda Θεσσαλον "οίκοι".
-
-RULES:
-- Answer in Greek
-- Keep answers SHORT and clear (max 6-8 lines)
-- Use bullet points
-- Only mention 2-3 most relevant properties
-- Always end with the phone number: 6974023646
-- Never repeat the same information
-- Be friendly but professional
-
-PROPERTY INFO:
-${WEBSITE_CONTEXT}`,
+    model: 'llama-3.3-70b-versatile',
     suggestions: [
       'Βρες μου διαμέρισμα στη Θεσσαλονίκη',
       'Τιμές για ενοικίαση;',
       '2 υπνοδωμάτια κέντρο'
     ]
   };
+
+  let PROPERTIES = [];
+
+  // Load properties from GitHub
+  async function loadProperties() {
+    try {
+      const res = await fetch("https://raw.githubusercontent.com/egineellinas6-cmd/chatwidget/refs/heads/main/properties.json");
+      PROPERTIES = await res.json();
+      console.log("✅ Properties loaded from GitHub:", PROPERTIES.length);
+    } catch (err) {
+      console.error("Failed to load properties.json from GitHub");
+      PROPERTIES = [];
+    }
+  }
 
   function init() {
     if (!document.body) {
@@ -85,7 +73,6 @@ ${WEBSITE_CONTEXT}`,
     `;
     shadow.appendChild(style);
 
-    /* UI Elements */
     const btn = document.createElement('button');
     btn.id = 'cw-btn';
     btn.innerHTML = '💬';
@@ -122,7 +109,7 @@ ${WEBSITE_CONTEXT}`,
 
     const footer = document.createElement('div');
     footer.id = 'cw-footer';
-    footer.innerHTML = `Powered by Groq • v2.0`;  /* ← VERSION SHOWN HERE */
+    footer.innerHTML = `Powered by Groq • v3.0`;
 
     panel.appendChild(header);
     panel.appendChild(msgs);
@@ -158,7 +145,7 @@ ${WEBSITE_CONTEXT}`,
     function addMsg(role, text) {
       const d = document.createElement('div');
       d.className = `cw-bub ${role === 'user' ? 'u' : 'b'}`;
-      d.textContent = text;
+      d.innerHTML = text;
       msgs.appendChild(d);
       msgs.scrollTop = msgs.scrollHeight;
       return d;
@@ -189,6 +176,23 @@ ${WEBSITE_CONTEXT}`,
 
       const typing = addTyping();
 
+      // Build context from loaded properties
+      const contextText = PROPERTIES.length > 0 
+        ? PROPERTIES.map(p => `• ${p.title} - ${p.location} | ${p.price} | ${p.size}\n  ${p.description}\n  Link: ${p.link}`).join('\n\n')
+        : "No properties loaded.";
+
+      const systemPrompt = `You are a helpful real estate assistant for Panda Θεσσαλον "οίκοι".
+
+Use ONLY these properties to answer:
+${contextText}
+
+Rules:
+- Answer in Greek
+- Keep answers short (max 6-8 lines)
+- Use bullet points
+- When mentioning a property, include the link like this: [Δείτε το ακίνητο](LINK)
+- End with phone number: 6974023646`;
+
       try {
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
@@ -199,7 +203,7 @@ ${WEBSITE_CONTEXT}`,
           body: JSON.stringify({
             model: cfg.model,
             messages: [
-              { role: 'system', content: cfg.systemPrompt },
+              { role: 'system', content: systemPrompt },
               ...history
             ]
           })
@@ -244,7 +248,10 @@ ${WEBSITE_CONTEXT}`,
       }
     });
 
-    addMsg('bot', cfg.welcomeMessage);
+    // Load properties from GitHub and show welcome
+    loadProperties().then(() => {
+      addMsg('bot', cfg.welcomeMessage);
+    });
   }
 
   init();
